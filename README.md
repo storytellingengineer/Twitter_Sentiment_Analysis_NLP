@@ -11,9 +11,9 @@ Formally, given a training sample of tweets and labels, where label '1' denotes 
 1.	[Importing the libraries](#1)
 2.  [Loading the Dataset](#2)
 3.  [Some terminology before going forward](#3)
-4.  [Pre-processing the Dataset](#4)
-5.  [Using Regular Expression](#5)
-6.  [Using SentimentIntensityAnalyzer](#6)
+4.  [Preprocessing the data](#4)
+5.  [Exploratory Data Analysis](#5)
+6.  [Feature extraction](#6)
 7.  [Calculating scores](#7)
 
 
@@ -21,13 +21,13 @@ Formally, given a training sample of tweets and labels, where label '1' denotes 
 
 [Table of Contents](#0.1)
 
-Importing some important libraries for this type of project - Regular expression, NLTK, Spacy
+Importing some important libraries like pandas, numpy, NLTK, matplotlib, seaborn...
 
 # **2. Loading the Dataset** <a class="anchor" id="2"></a>
 
 [Table of Contents](#0.1)
 
-Using Twitter Dataset downloaded from Kaggle *(Provided in this repository)*
+Dataset is provided in the repository <a href="https://github.com/AayushSaxena08/Twitter_Sentiment_Analysis_NLP"> Link </a>
 
 # **3. Some terminology before going forward** <a class="anchor" id="3"></a>
 
@@ -52,7 +52,105 @@ The Natural Language Toolkit (NLTK) is a platform used for building Python progr
  
 - **Tagging**: POS Tagging in NLTK is a process to mark up the words in text format for a particular part of a speech based on its definition and context. Part of Speech Tags are useful for building parse trees, which are used in building NERs (most named entities are Nouns) and extracting relations between words.
 
-# **4. Pre-processing the Dataset** <a class="anchor" id="4"></a>
-
+# **4. Preprocessing the data** <a class="anchor" id="4"></a>
 [Table of Contents](#0.1)
 
+- removes pattern in the input text
+    
+        def remove_pattern(input_text,pattern):
+          r = re.findall(pattern,input_text)
+          for word in r:
+            input_text = re.sub(word,  "", input_text)
+          return input_text
+
+    
+- remove twitter handles (@user)
+        
+        df["clean_tweet"] = np.vectorize(remove_pattern)(df["tweet"], "@[\w]*")
+    
+    
+- remove special characters, numbers and punctuations
+        
+        df["clean_tweet"] = df["clean_tweet"].str.replace(r"[^a-zA-Z0-9]+", ' ')
+    
+    
+- remove shortcuts
+    
+        df["clean_tweet"] = df["clean_tweet"].apply(lambda x: " ".join([w for w in x.split() if len(w) > 3]))
+    
+    
+- Tokenize 
+        
+        tokenized_tweet = df["clean_tweet"].apply(lambda x:x.split())
+    
+    
+- Stemming
+    
+        from nltk.stem.porter import PorterStemmer
+        stemmer = PorterStemmer()
+        tokenized_tweet = tokenized_tweet.apply(lambda sentence:[stemmer.stem(word) for word in sentence])
+    
+    
+- Combine the words into a sentence
+    
+        for i in range(len(tokenized_tweet)):
+        tokenized_tweet[i] = " ".join(tokenized_tweet[i])
+        df["clean_tweet"] = tokenized_tweet
+    
+    
+# **5. Exploratory Data Analysis** <a class="anchor" id="5"></a>
+[Table of Contents](#0.1)
+
+- Visualized all the frequently used words and plot a wordcloud 
+
+        all_words = " ".join([sentence for sentence in df["clean_tweet"]])
+
+        from wordcloud import WordCloud
+        wordcloud = WordCloud(width=800, height=500, random_state=42, max_font_size=100).generate(all_words)
+
+        #plot the graph
+        plt.figure(figsize=(15,8))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.show()
+
+    ![image](https://user-images.githubusercontent.com/35486320/194721703-cbb6c787-c419-4f3f-85b1-93d79759fb76.png)
+
+- Extracting the hashtags from the tweets
+
+        def hashtag_extract(tweets):
+          hashtags = []
+          # loop words in a tweet
+          for tweet in tweets:
+            ht = re.findall(r"#(\w+)", tweet)
+            hashtags.append(ht)
+          return hashtags
+          
+        # extract hashtags from non-racist/sexist tweets
+        ht_positive = hashtag_extract(df["tweet"][df["label"]==0])
+
+        # extract hashtags from racist/sexist tweets
+        ht_negative = hashtag_extract(df["tweet"][df["label"]==1])
+
+- Getting top 10 used words in positive and negative reference
+
+        freq = nltk.FreqDist(ht_positive)
+        d = pd.DataFrame({'Hashtag': list(freq.keys()), 'Count':list(freq.values())})
+      
+        # select top 10 hashtags
+        
+        d = d.nlargest(columns='Count',n=10)
+        plt.figure(figsize=(15,9))
+        sns.barplot(data=d,x='Hashtag',y='Count')
+        plt.show()
+        
+     ![image](https://user-images.githubusercontent.com/35486320/194721927-a8289682-795b-460c-87eb-7ef0f0d4aaeb.png)
+
+# **6. Feature extraction** <a class="anchor" id="6"></a>
+[Table of Contents](#0.1)
+
+
+        # Convert into BOW or Word2Vec --- CountVectorizer or TfIdfVectorizer
+        from sklearn.feature_extraction.text import CountVectorizer
+        bow_vectorizer = CountVectorizer(max_df=0.90, min_df=2, max_features=1000, stop_words='english')
+        bow = bow_vectorizer.fit_transform((df['clean_tweet']))
