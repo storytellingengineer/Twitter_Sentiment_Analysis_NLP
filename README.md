@@ -14,7 +14,7 @@ Formally, given a training sample of tweets and labels, where label '1' denotes 
 4.  [Preprocessing the data](#4)
 5.  [Exploratory Data Analysis](#5)
 6.  [Feature extraction](#6)
-7.  [Calculating scores](#7)
+7.  [Training the model](#7)
 
 
 # **1. Importing the libraries** <a class="anchor" id="1"></a>
@@ -68,35 +68,29 @@ The Natural Language Toolkit (NLTK) is a platform used for building Python progr
         
         df["clean_tweet"] = np.vectorize(remove_pattern)(df["tweet"], "@[\w]*")
     
-    
 - remove special characters, numbers and punctuations
         
         df["clean_tweet"] = df["clean_tweet"].str.replace(r"[^a-zA-Z0-9]+", ' ')
-    
-    
+     
 - remove shortcuts
     
         df["clean_tweet"] = df["clean_tweet"].apply(lambda x: " ".join([w for w in x.split() if len(w) > 3]))
     
-    
 - Tokenize 
         
         tokenized_tweet = df["clean_tweet"].apply(lambda x:x.split())
-    
-    
+      
 - Stemming
     
         from nltk.stem.porter import PorterStemmer
         stemmer = PorterStemmer()
         tokenized_tweet = tokenized_tweet.apply(lambda sentence:[stemmer.stem(word) for word in sentence])
     
-    
 - Combine the words into a sentence
     
         for i in range(len(tokenized_tweet)):
         tokenized_tweet[i] = " ".join(tokenized_tweet[i])
         df["clean_tweet"] = tokenized_tweet
-    
     
 # **5. Exploratory Data Analysis** <a class="anchor" id="5"></a>
 [Table of Contents](#0.1)
@@ -149,8 +143,20 @@ The Natural Language Toolkit (NLTK) is a platform used for building Python progr
 # **6. Feature extraction** <a class="anchor" id="6"></a>
 [Table of Contents](#0.1)
 
-
-        # Convert into BOW or Word2Vec --- CountVectorizer or TfIdfVectorizer
+        # Convert into BOW or Word2Vec --- CountVectorizer/TfIdfVectorizer
         from sklearn.feature_extraction.text import CountVectorizer
         bow_vectorizer = CountVectorizer(max_df=0.90, min_df=2, max_features=1000, stop_words='english')
         bow = bow_vectorizer.fit_transform((df['clean_tweet']))
+
+# **7. Training the model** <a class="anchor" id="7"></a>
+[Table of Contents](#0.1)
+
+- Used **LogisticRegression** model for binary classification
+
+        from sklearn.linear_model import LogisticRegression
+        
+- Used **f1 score** to compare models and **accuracy score** to calculate accuracy of the model
+
+     - Getting the accuracy of 94.8% is good enough for LogisticRegression() model
+
+# Thank you for reading this repo. Connect with me on <a href="https://www.linkedin.com/in/aayushsaxena08/">LinkedIn</a>⭐
